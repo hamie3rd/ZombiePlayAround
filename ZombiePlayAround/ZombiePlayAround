@@ -1,0 +1,876 @@
+#imports
+import pygame
+import time
+import random
+import math
+pygame.init()
+
+#Global Variables
+
+screen_height = 600
+screen_width = 1024
+screen = pygame.display.set_mode((screen_width, screen_height))
+white_color = (255,255,255)
+black_color = (0,0,0)
+clock = pygame.time.Clock()
+myfont = pygame.font.SysFont("arial", 60)
+scene = 0
+level_selection = 0
+paused = False
+spawn_timer = -1
+Zom_Normal_Timer = 40
+Zom_Fatty_Timer = 40
+Zom_Flying_Timer = 40
+Zom_Ninja_Timer = 40
+Weapon_Selected = "Flamethrower"
+rand_background = random.choice([1,2,3,4])
+
+#raw input for 'background'
+level_selection2 = 1
+
+#Groups
+Zombie_Group = pygame.sprite.Group()
+Ground_Group = pygame.sprite.Group()
+Menu_Buttons_Group = pygame.sprite.Group()
+Interaction_Group = pygame.sprite.Group()
+User_Interaction_Group = pygame.sprite.Group()
+Bison_Group = pygame.sprite.Group()
+All_Sprites_Group = pygame.sprite.Group()
+
+
+#Classes
+class Pause_Button(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.img = pygame.image.load('Buttons\Pause_Button.png')
+        self.rect = self.img.get_rect()
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
+        self.rect[0] = screen_width - self.width
+
+    def clicked(self, mouse_pos):
+        if mouse_pos[0] > self.rect[0] and mouse_pos[1] < self.rect[1] + self.height:
+            global paused
+            paused = not paused
+            if paused == True:
+                Menu_Buttons_Group.add(Menu_Spawn_Button())
+            else:
+                Menu_Buttons_Group.remove(self)
+                for i in Menu_Buttons_Group.sprites():
+                    i.kill()
+                Menu_Buttons_Group.add(self)
+
+    def draw_self(self):
+        screen.blit(self.img, (self.rect[0],self.rect[1]))
+
+class Menu_Spawn_Button(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.slider1Y = 100
+        self.slider2Y = 175
+        self.slider3Y = 250
+        self.slider4Y = 325
+        self.slider1X = 400 - 2*(Zom_Normal_Timer-5)
+        self.slider2X = 400 - 2*(Zom_Fatty_Timer-5)
+        self.slider3X = 400 - 2*(Zom_Flying_Timer-5)
+        self.slider4X = 400 - 2*(Zom_Ninja_Timer-5)
+
+    def clicked(self, mouse_pos):
+        if mouse_pos[1] > self.slider1Y - 25 and mouse_pos[1] < self.slider1Y + 30 and mouse_pos[0] >=90 and mouse_pos[0] <= 410:
+            global Zom_Normal_Timer
+            if mouse_pos[0] <= 100:
+                self.slider1X = 100
+            elif mouse_pos[0] >= 400:
+                self.slider1X = 400
+            else:
+                self.slider1X = mouse_pos[0]
+            Zom_Normal_Timer = 155 - ((self.slider1X-100)/2)
+        elif mouse_pos[1] > self.slider2Y - 25 and mouse_pos[1] < self.slider2Y + 30 and mouse_pos[0] >=90 and mouse_pos[0] <= 410:
+            global Zom_Fatty_Timer
+            if mouse_pos[0] <= 100:
+                self.slider2X = 100
+            elif mouse_pos[0] >= 400:
+                self.slider2X = 400
+            else:
+                self.slider2X = mouse_pos[0]
+            Zom_Fatty_Timer = 155 - ((self.slider2X - 100) / 2)
+        elif mouse_pos[1] > self.slider3Y - 25 and mouse_pos[1] < self.slider3Y + 30 and mouse_pos[0] >=90 and mouse_pos[0] <= 410:
+            global Zom_Flying_Timer
+            if mouse_pos[0] <= 100:
+                self.slider3X = 100
+            elif mouse_pos[0] >= 400:
+                self.slider3X = 400
+            else:
+                self.slider3X = mouse_pos[0]
+            Zom_Flying_Timer = 155 - ((self.slider3X - 100) / 2)
+        elif mouse_pos[1] > self.slider4Y - 25 and mouse_pos[1] < self.slider4Y + 30 and mouse_pos[0] >=90 and mouse_pos[0] <= 410:
+            global Zom_Ninja_Timer
+            if mouse_pos[0] <= 100:
+                self.slider4X = 100
+            elif mouse_pos[0] >= 400:
+                self.slider4X = 400
+            else:
+                self.slider4X = mouse_pos[0]
+            Zom_Ninja_Timer = 155 - ((self.slider4X - 100) / 2)
+        global Weapon_Selected
+        if mouse_pos[0] >= 450 and mouse_pos[0] <= 515:
+            if mouse_pos[1] >= 1 and mouse_pos[1] <100:
+                Weapon_Selected = "Flamethrower"
+            elif mouse_pos[1] >=101 and mouse_pos[1] <200:
+                Weapon_Selected = "BCT"
+            elif mouse_pos[1] >= 201 and mouse_pos[1] < 300:
+                Weapon_Selected = "Bumper"
+            elif mouse_pos[1] >= 301 and mouse_pos[1] < 400:
+                if Weapon_Selected != "Bison":
+                    Interaction_Group.add(Bison())
+                    Weapon_Selected = "Bison"
+        if mouse_pos[0] > 775 and mouse_pos[0] < 885 and mouse_pos[1] > 0 and mouse_pos[1] < 125:
+            global paused
+            global scene
+            global spawn_timer
+            global level_selection
+            global rand_background
+            for i in All_Sprites_Group.sprites():
+                i.kill()
+            scene = 0
+            level_selection = 0
+            paused = False
+            spawn_timer = -1
+            Zom_Normal_Timer = 30
+            Zom_Fatty_Timer = 120
+            Zom_Flying_Timer = 50
+            Zom_Ninja_Timer = 50
+            Weapon_Selected = "Flamethrower"
+            rand_background = random.choice([1, 2, 3, 4])
+
+
+    def draw_self(self):
+        #floating background
+        pygame.draw.rect(screen, (black_color), pygame.Rect(0, 0, 450, 400))
+        #lines
+        pygame.draw.rect(screen, (white_color), pygame.Rect(100,self.slider1Y,300,5))
+        pygame.draw.rect(screen, (white_color), pygame.Rect(100,self.slider2Y,300,5))
+        pygame.draw.rect(screen, (white_color), pygame.Rect(100,self.slider3Y,300,5))
+        pygame.draw.rect(screen, (white_color), pygame.Rect(100,self.slider4Y,300,5))
+        #bars to drag
+        pygame.draw.rect(screen, (white_color), pygame.Rect(self.slider1X, (self.slider1Y - 20), 10, 45))
+        pygame.draw.rect(screen, (white_color), pygame.Rect(self.slider2X, (self.slider2Y - 20), 10, 45))
+        pygame.draw.rect(screen, (white_color), pygame.Rect(self.slider3X, (self.slider3Y - 20), 10, 45))
+        pygame.draw.rect(screen, (white_color), pygame.Rect(self.slider4X, (self.slider4Y - 20), 10, 45))
+        #zombies above the bars to show which one's which
+        self.img1 = pygame.image.load('Zombie_Normal\Zom_Norm_Walk_01.png')
+        self.img2 = pygame.image.load('Zombie_Fatty\Zom_Fatty_Walk_01.png')
+        self.img3 = pygame.image.load('Zombie_Flying\Zombie_Flying_01.png')
+        self.img4 = pygame.image.load('Zombie_Ninja\Zom_Ninja_Walk_01.png')
+        screen.blit(self.img1, (40, self.slider1Y - 20))
+        screen.blit(self.img2, (25, self.slider2Y - 45))
+        screen.blit(self.img3, (40, self.slider3Y - 20))
+        screen.blit(self.img4, (40, self.slider4Y - 20))
+        #text
+        txt = myfont.render("Spawn Rates", 1, (white_color))
+        screen.blit(txt, (45, 7))
+        #weapon buttons
+        self.flamethrowerimg = pygame.image.load("Buttons\Flamethrower_Button_Off.png")
+        self.BCTimg = pygame.image.load("Buttons\BCT_Button_Off.png")
+        self.Bumperimg = pygame.image.load("Buttons\Bumper_Button_Off.png")
+        self.Bisonimg = pygame.image.load("Buttons\Bison_Button_Off.png")
+        self.Menuimg = pygame.image.load("Buttons\Main_Menu_Button.png")
+        global Weapon_Selected
+        if Weapon_Selected == "Flamethrower":
+            self.flamethrowerimg = pygame.image.load("Buttons\Flamethrower_Button_On.png")
+        elif Weapon_Selected == "BCT":
+            self.BCTimg = pygame.image.load("Buttons\BCT_Button_On.png")
+        elif Weapon_Selected == "Bumper":
+            self.Bumperimg = pygame.image.load("Buttons\Bumper_Button_On.png")
+        elif Weapon_Selected == "Bison":
+            self.Bisonimg = pygame.image.load("Buttons\Bison_Button_On.png")
+        screen.blit(self.flamethrowerimg,(450,0))
+        screen.blit(self.BCTimg,(450,100))
+        screen.blit(self.Bumperimg,(450,200))
+        screen.blit(self.Bisonimg,(450,300))
+        screen.blit(self.Menuimg, (800, 20))
+
+class Ground_Tile(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.img = pygame.image.load('Ground\Ground_Tile.png')
+        self.rect = self.img.get_rect()
+        self.height = self.img.get_height()
+        self.width = self.img.get_width()
+        self.rect[1] = screen_height - self.height
+        self.add(Ground_Group)
+
+    def draw(self, height):
+        self.rect[1] = height
+        screen.blit(self.img, (self.rect[0],self.rect[1]))
+
+
+class Small_Explosion(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.img = pygame.image.load('Interactions\Explosion_Small2_01.png')
+        self.img1 = pygame.image.load('Interactions\Explosion_Small2_02.png')
+        self.img2 = pygame.image.load('Interactions\Explosion_Small2_02.png')
+        self.img3 = pygame.image.load('Interactions\Explosion_Small2_03.png')
+        self.img4 = pygame.image.load('Interactions\Explosion_Small2_03.png')
+        self.rect = self.img.get_rect()
+        self.height = self.img.get_height()
+        self.width = self.img.get_width()
+        self.rect[0] = x - self.width/2
+        self.rect[1] = y - self.height/2
+        self.frame = 0
+
+    def animate_self(self):
+        global paused
+        if self.frame == 0:
+            self.img = self.img1
+        elif self.frame == 1:
+            self.img = self.img2
+        elif self.frame == 2:
+            self.img = self.img3
+        elif self.frame == 3:
+            self.img = self.img4
+        else:
+            self.kill()
+        if not paused:
+            self.frame += 1
+        screen.blit(self.img, (self.rect[0], self.rect[1]))
+
+class Large_Explosion(Small_Explosion):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.img = pygame.image.load('Interactions\Explosion_Large2_01.png')
+        self.img1 = pygame.image.load('Interactions\Explosion_Large2_02.png')
+        self.img2 = pygame.image.load('Interactions\Explosion_Large2_02.png')
+        self.img3 = pygame.image.load('Interactions\Explosion_Large2_03.png')
+        self.img4 = pygame.image.load('Interactions\Explosion_Large2_03.png')
+        self.rect = self.img.get_rect()
+        self.height = self.img.get_height()
+        self.width = self.img.get_width()
+        self.rect[0] = x - self.width/2
+        self.rect[1] = y - self.height/2
+        self.frame = 0
+
+class Smoke_explosion(Small_Explosion):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.img = pygame.image.load('Interactions\Zom_Ninja_Smoke_02.png')
+        self.img1 = pygame.image.load('Interactions\Zom_Ninja_Smoke_03.png')
+        self.img2 = pygame.image.load('Interactions\Zom_Ninja_Smoke_04.png')
+        self.img3 = pygame.image.load('Interactions\Zom_Ninja_Smoke_06.png')
+        self.img4 = pygame.image.load('Interactions\Zom_Ninja_Smoke_07.png')
+        self.rect = self.img.get_rect()
+        self.height = self.img.get_height()
+        self.width = self.img.get_width()
+        self.rect[0] = x - ((self.height - 62)/2)
+        self.rect[1] = y - ((self.height - 40)/2)
+        self.x = x
+        self.y = y
+        self.frame = 0
+
+    def animate_self(self):
+        global paused
+        if self.frame == 0:
+            self.img = self.img1
+        elif self.frame == 1:
+            self.img = self.img2
+        elif self.frame == 2:
+            self.rect[0] = self.x
+            self.rect[1] = self.y
+            self.img = self.img3
+        elif self.frame >= 20:
+            self.kill()
+        else:
+            self.img = self.img4
+        if not paused:
+            self.frame += 1
+        screen.blit(self.img, (self.rect[0], self.rect[1]))
+
+
+class Zombie_Normal(pygame.sprite.Sprite):
+    # The 'main' zombie sprite and attributes
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        #frames for animation
+        self.img1 = pygame.image.load('Zombie_Normal\Zom_Norm_Walk_01.png')
+        self.img2 = pygame.image.load('Zombie_Normal\Zom_Norm_Walk_02.png')
+        self.img3 = pygame.image.load('Zombie_Normal\Zom_Norm_Walk_03.png')
+        self.img4 = pygame.image.load('Zombie_Normal\Zom_Norm_Walk_04.png')
+        self.img5 = pygame.image.load('Zombie_Normal\Zom_Norm_Walk_05.png')
+        self.img6 = pygame.image.load('Zombie_Normal\Zom_Norm_Walk_06.png')
+        self.img7 = pygame.image.load('Zombie_Normal\Zom_Norm_Walk_07.png')
+        self.img8 = pygame.image.load('Zombie_Normal\Zom_Norm_Walk_08.png')
+
+        #other variables
+        self.img = self.img1
+        self.rect = self.img.get_rect()
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
+        self.rect[0] = random.randrange(1,(screen_width-self.width-1))
+        self.speed = [(random.randrange(-3, 4, 2)),0]
+        self.frame = 1
+        self.frame_delay = 0
+        self.speed_calculation = 4.5
+
+        # set so zombie spawns on a ground tile
+        if Ground_Group.sprites() != []:
+            temp_list = []
+            for i in Ground_Group.sprites():
+                temp_list.append(i.rect[1] - self.height)
+            self.rect[1] = random.choice(temp_list)
+        else:
+            self.rect[1] = random.randrange(1, (screen_height - self.height - 1))
+
+        #Flips the picture to point the right direction
+        if self.speed[0] == abs(self.speed[0]):
+            self.img = pygame.transform.flip(self.img, True, False)
+
+    def draw(self):
+        screen.blit(self.img, (self.rect[0], self.rect[1]))
+
+    def walk(self):
+        if self.rect[0] <= 0:
+            self.speed[0] = self.speed[0] * -1
+            self.rect[0] = 4
+        if self.rect[0] >= screen_width - self.width:
+            self.speed[0] = self.speed[0] * -1
+            self.rect[0] = screen_width - self.width - 4
+        self.rect[0] += self.speed[0]
+        self.animate()
+
+    def animate(self):
+        if self.frame_delay > (self.speed_calculation/abs(self.speed[0])):
+            if self.frame == 1:
+                self.img = self.img1
+            elif self.frame == 2:
+                self.img = self.img2
+            elif self.frame == 3:
+                self.img = self.img3
+            elif self.frame == 4:
+                self.img = self.img4
+            elif self.frame == 5:
+                self.img = self.img5
+            elif self.frame == 6:
+                self.img = self.img6
+            elif self.frame == 7:
+                self.img = self.img7
+            elif self.frame == 8:
+                self.img = self.img8
+                self.frame = 0
+            if self.speed[0] == abs(self.speed[0]):
+                self.img = pygame.transform.flip(self.img, True, False)
+            self.frame_delay = 0
+            self.frame += 1
+        self.frame_delay += 1
+        self.draw()
+
+    def explode(self, mouse_pos):
+        if mouse_pos[0] >= self.rect[0] and mouse_pos[0] <= self.rect[0]+self.width and mouse_pos[1] >= self.rect[1] and mouse_pos[1] <= self.rect[1]+self.height:
+            Interaction_Group.add(Small_Explosion(self.rect[0]+ (self.width/2), self.rect[1] + (self.height/2)))
+            for i in range(3):
+                Interaction_Group.add(Zombie_Limbs(self.rect[0]+ (self.width/2), self.rect[1] + (self.height/2)))
+            self.kill()
+
+    def explode_always(self):
+        self.explode([self.rect[0], self.rect[1]])
+
+class Zombie_Fatty(Zombie_Normal):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        #loading in animations
+        self.img1 = pygame.image.load('Zombie_Fatty\Zom_Fatty_Walk_01.png')
+        self.img2 = pygame.image.load('Zombie_Fatty\Zom_Fatty_Walk_02.png')
+        self.img3 = pygame.image.load('Zombie_Fatty\Zom_Fatty_Walk_03.png')
+        self.img4 = pygame.image.load('Zombie_Fatty\Zom_Fatty_Walk_04.png')
+        self.img5 = pygame.image.load('Zombie_Fatty\Zom_Fatty_Walk_05.png')
+        self.img6 = pygame.image.load('Zombie_Fatty\Zom_Fatty_Walk_06.png')
+        self.img7 = pygame.image.load('Zombie_Fatty\Zom_Fatty_Walk_05.png')
+        self.img8 = pygame.image.load('Zombie_Fatty\Zom_Fatty_Walk_04.png')
+
+        #other variables
+        self.img = self.img1
+        self.rect = self.img.get_rect()
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
+        self.rect[0] = random.randrange(1,(screen_width-self.width-1))
+        self.speed = [(random.choice([1,-1])),0]
+        self.frame = 1
+        self.frame_delay = 0
+        self.speed_calculation = 5
+
+        # set so zombie spawns on a ground tile
+        if Ground_Group.sprites() != []:
+            temp_list = []
+            for i in Ground_Group.sprites():
+                temp_list.append(i.rect[1] - self.height)
+            self.rect[1] = random.choice(temp_list)
+        else:
+            self.rect[1] = random.randrange(1, (screen_height - self.height - 1))
+
+        #Flips the picture to point the right direction
+        if self.speed[0] == abs(self.speed[0]):
+            self.img = pygame.transform.flip(self.img, True, False)
+
+    def explode(self, mouse_pos):
+        if mouse_pos[0] >= self.rect[0] and mouse_pos[0] <= self.rect[0] + self.width and mouse_pos[1] >= self.rect[
+            1] and mouse_pos[1] <= self.rect[1] + self.height:
+            Interaction_Group.add(Large_Explosion(self.rect[0] + (self.width / 2), self.rect[1] + (self.height / 2)))
+            for i in range(3):
+                Interaction_Group.add(Zombie_Limbs(self.rect[0]+ (self.width/2), self.rect[1] + (self.height/2)))
+            self.kill()
+
+class Zombie_Flying(Zombie_Normal):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        # other variables
+        self.img = pygame.image.load('Zombie_Flying\Zombie_Flying_01.png')
+        self.rect = self.img.get_rect()
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
+        self.rect[0] = random.randrange(1, (screen_width - self.width - 1))
+        self.rect[1] = screen_height + self.height + 10
+        self.speed = [(random.choice([1,2,3,4,5,6,7,-1,-2,-3,-4,-5,-6,-7])),(random.randrange(-40,-20))]
+        self.gravity = 1
+
+        # Flips the picture to point the right direction
+        if self.speed[0] == abs(self.speed[0]):
+            self.img = pygame.transform.flip(self.img, True, False)
+
+    def walk(self):
+        if self.rect[0] <= 0:
+            self.speed[0] = self.speed[0] * -1
+            self.rect[0] = 4
+        if self.rect[0] >= screen_width - self.width:
+            self.speed[0] = self.speed[0] * -1
+            self.rect[0] = screen_width - self.width - 4
+        self.rect[0] += self.speed[0]
+        self.rect[1] += self.speed[1]
+        self.speed[1] += self.gravity
+        if self.rect[1] > screen_height + (self.height * 3):
+            self.kill()
+        if self.speed[0] < 0:
+            flipped = True
+        else:
+            flipped = False
+        if self.speed[1] > 0:
+            Zombie_Group.add(Zombie_Parachute(self.rect.center, flipped))
+            self.kill()
+        self.draw()
+
+class Zombie_Parachute(Zombie_Normal):
+    def __init__(self, location, flip):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        if not flip:
+            self.img = pygame.image.load("Zombie_Flying\Zombie_Flying_02.png")
+            self.img = pygame.transform.flip(self.img, True, False)
+        else:
+            self.img = pygame.image.load("Zombie_Flying\Zombie_Flying_02.png")
+        self.rect = self.img.get_rect()
+        self.rect.center = location
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
+        self.speed = [0,2]
+
+    def walk(self):
+        self.animate()
+
+    def animate(self):
+        if self.rect[1] + self.speed[1] >= screen_height:
+            self.kill()
+        self.rect[1] += self.speed[1]
+        self.draw()
+
+class Zombie_Ninja(Zombie_Normal):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.img1 = pygame.image.load('Zombie_Ninja\Zom_Ninja_Walk_01.png')
+        self.img2 = pygame.image.load('Zombie_Ninja\Zom_Ninja_Walk_02.png')
+        self.img3 = pygame.image.load('Zombie_Ninja\Zom_Ninja_Walk_03.png')
+        self.img4 = pygame.image.load('Zombie_Ninja\Zom_Ninja_Walk_04.png')
+        self.img5 = pygame.image.load('Zombie_Ninja\Zom_Ninja_Walk_03.png')
+        self.img6 = pygame.image.load('Zombie_Ninja\Zom_Ninja_Walk_02.png')
+
+        #other variables
+        self.img = self.img1
+        self.rect = self.img.get_rect()
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
+        self.rect[0] = random.randrange(1,(screen_width-self.width-1))
+        self.speed = [(random.choice([-9, -10, -11, 9, 10, 11])),0]
+        self.frame = 1
+        self.frame_delay = 0
+        self.speed_calculation = 4.5
+
+        # set so zombie spawns on a ground tile
+        if Ground_Group.sprites() != []:
+            temp_list = []
+            for i in Ground_Group.sprites():
+                temp_list.append(i.rect[1] - self.height)
+            self.rect[1] = random.choice(temp_list)
+        else:
+            self.rect[1] = random.randrange(1, (screen_height - self.height - 1))
+
+        #Flips the picture to point the right direction
+        if self.speed[0] == abs(self.speed[0]):
+            self.img = pygame.transform.flip(self.img, True, False)
+
+    def animate(self):
+        if self.frame_delay > (self.speed_calculation/abs(self.speed[0])):
+            if self.frame == 1:
+                self.img = self.img1
+            elif self.frame == 2:
+                self.img = self.img2
+            elif self.frame == 3:
+                self.img = self.img3
+            elif self.frame == 4:
+                self.img = self.img4
+            elif self.frame == 5:
+                self.img = self.img5
+            elif self.frame == 6:
+                self.img = self.img6
+                self.frame = 0
+            if self.speed[0] == abs(self.speed[0]):
+                self.img = pygame.transform.flip(self.img, True, False)
+            self.frame_delay = 0
+            self.frame += 1
+        self.frame_delay += 1
+        self.draw()
+        ran_num = random.randrange(1,100)
+        if ran_num == 1:
+            self.log_animation()
+
+    def log_animation(self):
+        Interaction_Group.add(Smoke_explosion(self.rect[0], self.rect[1]))
+        move_distance = 130
+        if self.rect[0] > 1 + move_distance and self.rect[0] < screen_width - self.width - 1:
+            if abs(self.speed[0]) == self.speed[0]:
+                self.rect[0] += move_distance
+            else:
+                self.rect[0] -= move_distance
+        else:
+            if abs(self.speed[0]) == self.speed[0]:
+                self.rect[0] -= move_distance/2
+                self.speed[0] = -1 * self.speed[0]
+            else:
+                self.rect[0] += move_distance/2
+                self.speed[0] = -1 * self.speed[0]
+
+
+class Zombie_Limbs(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.gravity = 1
+        self.img1 = pygame.image.load("Interactions\Zombie_Arm.png")
+        self.img2 = pygame.image.load("Interactions\Zombie_Leg.png")
+        self.img3 = pygame.image.load("Interactions\Zombie_Eyes.png")
+        ran_choice = random.randrange(1,4,1)
+        if ran_choice == 1:
+            self.img = self.img1
+        elif ran_choice == 2:
+            self.img = self.img2
+        else:
+            self.img = self.img3
+        self.speed = [random.choice([8,6,4,2,-2,-4,-6,-8]),random.randrange(-8,-14,-1)]
+        self.rect = self.img.get_rect()
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
+        self.rect[0] = x - (self.width / 2)
+        self.rect[1] = y - (self.height / 2)
+        self.img = pygame.transform.rotate(self.img, random.randrange(1,360,1))
+
+    def animate_self(self):
+        global paused
+        if not paused:
+            self.rect[0] += self.speed[0]
+            self.speed[1] += self.gravity
+            self.rect[1] += self.speed[1]
+            if self.rect[1] > screen_height:
+                self.kill()
+        self.draw()
+
+    def draw(self):
+        screen.blit(self.img, (self.rect[0],self.rect[1]))
+
+class BCT(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.img1 = pygame.image.load('User_Interactions\BCT_01.png')
+        self.img2 = pygame.image.load('User_Interactions\BCT_02.png')
+        self.img = self.img1
+        self.rect = self.img.get_rect()
+        self.height = self.img.get_height()
+        self.width = self.img.get_width()
+        self.rect[0] = x - (self.width/2)
+        self.rect[1] = y - (self.height/2)
+        self.speed = [0.0, 0.0]
+        self.acceleration = 0
+        self.gravity = 0.8
+        self.frame_delay = 15
+        self.frame_count = 0
+        self.frame = 1
+
+    def animate_self(self):
+        #set animation
+        global paused
+        if not paused:
+            if self.frame_count > self.frame_delay:
+                self.frame_count = 0
+                if self.frame == 1:
+                    self.frame = 2
+                    self.img = self.img2
+                else:
+                    self.frame = 1
+                    self.img = self.img1
+            self.frame_count += 1
+            #kill if leave screen
+            if self.rect[0] > screen_width:
+                self.kill()
+            #gravity and set on a lane
+
+            #speed and movement
+            if len(Ground_Group.sprites()) != 0:
+                if not pygame.sprite.spritecollide(self,Ground_Group,False):
+                    self.speed[1] += self.gravity
+                else:
+                    self.acceleration = 1.2
+                    self.speed[1] = 0
+            self.speed[0] += self.acceleration
+            self.rect[0] += self.speed[0]
+            self.rect[1] += self.speed[1]
+            self.check_collide()
+        else:
+            self.draw()
+
+    def check_collide(self):
+        Zom_Collision = pygame.sprite.spritecollide(self,Zombie_Group,False)
+        for i in Zom_Collision:
+            i.explode_always()
+        self.draw()
+
+    def draw(self):
+        screen.blit(self.img, (self.rect[0], self.rect[1]))
+
+
+class Bumper(BCT):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.img1 = pygame.image.load('User_Interactions\Bumper_01.png')
+        self.img2 = pygame.image.load('User_Interactions\Bumper_02.png')
+        self.img = self.img1
+        self.rect = self.img.get_rect()
+        self.height = self.img.get_height()
+        self.width = self.img.get_width()
+        self.rect[0] = x - (self.width/2)
+        self.rect[1] = y - (self.height/2)
+        self.speed = [0.0, 0.0]
+        self.acceleration = 0.0
+        self.gravity = 0.8
+        self.frame_delay = 15
+        self.frame_count = 0
+        self.frame = 1
+
+    def animate_self(self):
+        #bounce off zombies
+        global paused
+        if not paused:
+            Zom_Collision = pygame.sprite.spritecollide(self, Zombie_Group, False)
+            for i in Zom_Collision:
+                zom_center = i.rect.center
+                my_center = self.rect.center
+                bounce_move = my_center[0] - zom_center[0]
+                self.speed[0] += bounce_move/2
+                i.explode_always()
+                self.speed[1] = abs(self.speed[1]) * -1
+
+            self.speed[1] += self.gravity
+            if self.rect[1] > screen_height:
+                self.kill()
+            if self.rect[0] + self.speed[0] <= 0 or self.rect[0] + self.speed[0] + self.width >= screen_width:
+                self.speed[0] = self.speed[0] * -1
+            self.rect[0] += self.speed[0]
+            self.rect[1] += self.speed[1]
+        self.draw()
+
+class Bison(BCT):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group, Bison_Group)
+        self.img = pygame.image.load("Interactions\Bison_01.png")
+        self.rect = self.img.get_rect()
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
+        self.rect[0] = screen_width/2 - self.width/2
+        self.rect[1] = 50
+
+    def animate_self(self):
+        global Weapon_Selected
+        if Weapon_Selected != "Bison":
+            self.kill()
+        self.draw()
+
+    def fire(self, mouse_pos):
+        Interaction_Group.add(Bison_laser(mouse_pos))
+
+
+class Bison_laser(pygame.sprite.Sprite):
+    def __init__(self, mouse_pos):
+        pygame.sprite.Sprite.__init__(self, All_Sprites_Group)
+        self.img1 = pygame.image.load("Interactions\Bison_Bah_01.png")
+        self.img2 = pygame.image.load("Interactions\Bison_Bah_02.png")
+        self.img = self.img1
+        self.rect = self.img.get_rect()
+        self.rect[0] = screen_width/2
+        self.rect[1] = 90
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
+        self.frame_count = 0
+        rads = math.atan2((-1*(mouse_pos[1] - self.rect[1])),(mouse_pos[0]-self.rect[0]))
+        rads %= 2* math.pi
+        self.angle = math.degrees(rads)
+        if self.angle <= 90:
+            self.angle = 360
+        elif self.angle <= 180:
+            self.angle = 180
+        self.ran_num = self.angle
+        self.newx = (40 * math.cos(math.radians(self.ran_num)))
+        self.newy = (80 * math.sin(math.radians(self.ran_num)))
+        self.imgtest = pygame.transform.rotate(self.img1, self.ran_num)
+        self.width = self.imgtest.get_width()
+        self.height = self.imgtest.get_height()
+        if self.ran_num < 270:
+            self.newx -= self.width - 40
+        else:
+            self.newx -= 40
+        self.rect[0] += self.newx
+        self.rect[1] -= self.newy + 40
+
+    def animate_self(self):
+        self.frame_count += 1
+        if self.frame_count > 12:
+            self.kill()
+        if self.frame_count % 2 != 1:
+            self.img = pygame.transform.rotate(self.img1, self.ran_num)
+        else:
+            self.img = pygame.transform.rotate(self.img2, self.ran_num)
+        self.width = self.img.get_width()
+        screen.blit(self.img, (self.rect[0], self.rect[1]))
+        self.rect[2] = self.width
+        self.rect[3] = self.height
+        for i in pygame.sprite.spritecollide(self,Zombie_Group,False):
+            i.explode_always()
+
+#game loop
+while 1:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            quit()
+        if scene == 0:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                if mouse_pos[0] > 50 and mouse_pos[0] < 180 and mouse_pos[1] < 475 and mouse_pos[1] > 225:
+                    level_selection = 1
+                    scene = 2
+                    Menu_Buttons_Group.add(Pause_Button())
+                elif mouse_pos[0] > 300 and mouse_pos[0] < 430 and mouse_pos[1] < 475 and mouse_pos[1] > 225:
+                    level_selection = 2
+                    scene = 2
+                    Menu_Buttons_Group.add(Pause_Button())
+                elif mouse_pos[0] > 510 and mouse_pos[0] < 690 and mouse_pos[1] < 475 and mouse_pos[1] > 225:
+                    level_selection = 3
+                    scene = 2
+                    Menu_Buttons_Group.add(Pause_Button())
+                elif mouse_pos[0] > 730 and mouse_pos[0] < 1010 and mouse_pos[1] < 475 and mouse_pos[1] > 80:
+                    level_selection = 4
+                    scene = 2
+                    Menu_Buttons_Group.add(Pause_Button())
+        elif scene == 2:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                #Weapons
+                if Weapon_Selected == "Flamethrower":
+                    if not paused:
+                        for i in Zombie_Group.sprites():
+                            i.explode(mouse_pos)
+                elif Weapon_Selected == "BCT":
+                    if not paused:
+                        User_Interaction_Group.add(BCT(mouse_pos[0], mouse_pos[1]))
+                elif Weapon_Selected == "Bison":
+                    if not paused:
+                       for i in Bison_Group.sprites():
+                           i.fire(mouse_pos)
+                elif Weapon_Selected == "Bumper":
+                    if not paused:
+                        User_Interaction_Group.add(Bumper(mouse_pos[0], mouse_pos[1]))
+
+                #the pause button
+                for i in Menu_Buttons_Group.sprites():
+                    i.clicked(mouse_pos)
+
+    #backgrounds and Level Select text
+    if scene == 2:
+        if rand_background == 1:
+            Background_Image = pygame.image.load('Backgrounds\Background_Rainbows.png')
+        elif rand_background == 2:
+            Background_Image = pygame.image.load('Backgrounds\Background_Picnic.png')
+        if rand_background == 3:
+            Background_Image = pygame.image.load('Backgrounds\Background_Space.png')
+        if rand_background == 4:
+            Background_Image = pygame.image.load('Backgrounds\Background_Underwater.png')
+        screen.blit(Background_Image, (0, 0))
+    elif scene == 0:
+        Background_Image = pygame.image.load('Backgrounds\Background_Gravestones.png')
+        screen.blit(Background_Image, (0, 0))
+        txt = myfont.render("How many levels do you want?", 1, (white_color))
+        txt2 = myfont.render("1", 1, (white_color))
+        txt3 = myfont.render("2", 1, (white_color))
+        txt4 = myfont.render("3", 1, (white_color))
+        txt5 = myfont.render("4", 1, (white_color))
+        screen.blit(txt, (100, 40))
+        screen.blit(txt2, (120, 405))
+        screen.blit(txt3, (360, 315))
+        screen.blit(txt4, (580, 320))
+        screen.blit(txt5, (860, 335))
+
+    #Main Gameplay
+    if scene == 2:
+        if level_selection >= 1:
+            Ground_Tile().draw(screen_height-32)
+            if level_selection == 2:
+                Ground_Tile().draw((screen_height * 0.5 - 32))
+            elif level_selection == 3:
+                Ground_Tile().draw((screen_height * 0.66 - 32))
+                Ground_Tile().draw((screen_height * 0.33 - 32))
+            elif level_selection == 4:
+                Ground_Tile().draw((screen_height * 0.25 - 32))
+                Ground_Tile().draw((screen_height * 0.50 - 32))
+                Ground_Tile().draw((screen_height * 0.75 - 32))
+        if not paused:
+            counter = 0
+            for i in Zombie_Group.sprites():
+                counter += 1
+            if counter < 100:
+                if spawn_timer % Zom_Normal_Timer == 0:
+                    Zombie_Group.add(Zombie_Normal())
+                if spawn_timer % Zom_Fatty_Timer == 0:
+                    Zombie_Group.add(Zombie_Fatty())
+                if spawn_timer % Zom_Flying_Timer == 0:
+                    Zombie_Group.add(Zombie_Flying())
+                if spawn_timer % Zom_Ninja_Timer == 0:
+                    Zombie_Group.add(Zombie_Ninja())
+                spawn_timer += 1
+
+        for i in Zombie_Group.sprites():
+            if not paused:
+                i.walk()
+            else:
+                i.draw()
+        for i in Interaction_Group.sprites():
+            i.animate_self()
+        for i in User_Interaction_Group.sprites():
+            i.animate_self()
+        for i in Menu_Buttons_Group.sprites():
+            i.draw_self()
+
+
+    pygame.display.update()
+    clock.tick(60)
